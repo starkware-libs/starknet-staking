@@ -535,7 +535,7 @@ pub(crate) impl MultiplePoolsDelegatorIntentActionSwitchFlowImpl of FlowTrait<
                 from_pool: first_strk_pool,
                 to_staker: second_staker.staker.address,
                 to_pool: second_strk_pool,
-                amount: amount,
+                :amount,
             );
         system
             .switch_delegation_pool(
@@ -543,7 +543,7 @@ pub(crate) impl MultiplePoolsDelegatorIntentActionSwitchFlowImpl of FlowTrait<
                 from_pool: first_btc_pool,
                 to_staker: second_staker.staker.address,
                 to_pool: second_btc_pool,
-                amount: amount,
+                :amount,
             );
 
         // Test pools.
@@ -5992,7 +5992,7 @@ pub(crate) impl StakerWithoutPoolMigrationOpenPoolsFlowImpl of FlowTrait<
         // Try to open a second btc pool with the same token.
         let res = system
             .safe_set_open_for_delegation(
-                staker: staker, token_address: system.btc_token.contract_address(),
+                :staker, token_address: system.btc_token.contract_address(),
             );
         assert_panic_with_error(res, StakingError::STAKER_ALREADY_HAS_POOL.describe());
 
@@ -6276,7 +6276,7 @@ pub(crate) impl PoolEICFlowImpl of FlowTrait<PoolEICFlow> {
         system.stake(:staker, :amount, pool_enabled: true, :commission);
         let pool_address = system.staking.get_pool(:staker);
         self.pool_v0 = Option::Some(pool_address);
-        system.set_pool_for_upgrade(pool_address: pool_address);
+        system.set_pool_for_upgrade(:pool_address);
     }
 
     fn setup_v1(ref self: PoolEICFlow, ref system: SystemState) {
@@ -6633,8 +6633,8 @@ pub(crate) impl DelegatorV0FindSigmaZeroFlowImpl of FlowTrait<DelegatorV0FindSig
         let commission = 200;
         system.stake(:staker, :amount, pool_enabled: true, :commission);
         let pool = system.staking.get_pool(:staker);
-        let delegator = system.new_delegator(amount: amount);
-        system.delegate(:delegator, :pool, amount: amount);
+        let delegator = system.new_delegator(:amount);
+        system.delegate(:delegator, :pool, :amount);
         self.delegator = Option::Some(delegator);
         self.pool = Option::Some(pool);
         system.set_pool_for_upgrade(pool_address: pool);
@@ -6675,8 +6675,8 @@ pub(crate) impl DelegatorRewardsV0FindSigmaFlowImpl of FlowTrait<DelegatorReward
         let commission = 200;
         system.stake(:staker, :amount, pool_enabled: true, :commission);
         let pool = system.staking.get_pool(:staker);
-        let delegator = system.new_delegator(amount: amount);
-        system.delegate(:delegator, :pool, amount: amount);
+        let delegator = system.new_delegator(:amount);
+        system.delegate(:delegator, :pool, :amount);
         self.staker = Option::Some(staker);
         self.delegator = Option::Some(delegator);
         self.pool = Option::Some(pool);
@@ -6796,7 +6796,7 @@ pub(crate) impl StakerMigrationSkipVersionFlowImpl of FlowTrait<StakerMigrationS
         let staker_address = staker.staker.address;
         let migration_safe_dispatcher = system.staking.migration_safe_dispatcher();
 
-        let result = migration_safe_dispatcher.staker_migration(staker_address: staker_address);
+        let result = migration_safe_dispatcher.staker_migration(:staker_address);
         assert_panic_with_error(result, StakingError::STAKER_NOT_MIGRATED.describe());
     }
 }
@@ -6832,7 +6832,7 @@ pub(crate) impl StakerMigrationMissingClassHashFlowImpl of FlowTrait<
         // Staker migration.
         let staker_address = staker.staker.address;
         let migration_safe_dispatcher = system.staking.migration_safe_dispatcher();
-        let result = migration_safe_dispatcher.staker_migration(staker_address: staker_address);
+        let result = migration_safe_dispatcher.staker_migration(:staker_address);
         assert_panic_with_error(result, InternalError::MISSING_CLASS_HASH.describe());
     }
 
@@ -7801,7 +7801,7 @@ pub(crate) impl DelegatorRewardsMigrationIdxLenIsOneFlowImpl of MultiVersionFlow
         let delegator = system.new_delegator(amount: 3 * amount);
         system.delegate(:delegator, :pool, :amount);
         system.advance_epoch();
-        system.increase_delegate(:delegator, :pool, amount: amount);
+        system.increase_delegate(:delegator, :pool, :amount);
         system.advance_epoch();
         self.pool = Option::Some(pool);
         self.delegator = Option::Some(delegator);
@@ -7861,7 +7861,7 @@ pub(crate) impl DelegatorRewardsMigrationIdxIsOneFlowImpl of MultiVersionFlowTra
         let delegator = system.new_delegator(amount: 3 * amount);
         system.delegate(:delegator, :pool, :amount);
         system.advance_epoch();
-        system.increase_delegate(:delegator, :pool, amount: amount);
+        system.increase_delegate(:delegator, :pool, :amount);
         system.advance_k_epochs_and_attest(:staker);
         system.advance_epoch();
 
@@ -7930,7 +7930,7 @@ pub(crate) impl DelegatorRewardsMigrationIdxIsLenFlowImpl of MultiVersionFlowTra
         system.delegate(:delegator, :pool, :amount);
         system.advance_k_epochs_and_attest(:staker);
         system.advance_k_epochs_and_attest(:staker);
-        system.add_to_delegation_pool(:delegator, :pool, amount: amount);
+        system.add_to_delegation_pool(:delegator, :pool, :amount);
         system.advance_epoch();
         self.pool = Option::Some(pool);
         self.delegator = Option::Some(delegator);
@@ -7998,7 +7998,7 @@ pub(crate) impl DelegatorRewardsMigrationFirstRegularCaseFlowImpl of MultiVersio
         system.delegate(:delegator, :pool, :amount);
         system.advance_k_epochs_and_attest(:staker);
         system.advance_k_epochs_and_attest(:staker);
-        system.add_to_delegation_pool(:delegator, :pool, amount: amount);
+        system.add_to_delegation_pool(:delegator, :pool, :amount);
         system.advance_epoch();
         self.staker = Option::Some(staker);
         self.pool = Option::Some(pool);
@@ -9612,7 +9612,7 @@ pub(crate) struct StakerFromV2Flow6 {
 pub(crate) impl StakerFromV2Flow6Impl of FlowTrait<StakerFromV2Flow6> {
     fn setup_v2(ref self: StakerFromV2Flow6, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
-        let staker = system.new_staker(amount: amount);
+        let staker = system.new_staker(:amount);
         system.stake(:staker, :amount, pool_enabled: false, commission: 0);
         system.advance_epoch();
         self.staker = Option::Some(staker);
@@ -9762,7 +9762,7 @@ pub(crate) struct MemberFromV1Flow3 {
 pub(crate) impl MemberFromV1Flow3Impl of FlowTrait<MemberFromV1Flow3> {
     fn setup_v1(ref self: MemberFromV1Flow3, ref system: SystemState) {
         let amount = system.staking.get_min_stake();
-        let staker = system.new_staker(amount: amount);
+        let staker = system.new_staker(:amount);
         system.stake(:staker, :amount, pool_enabled: true, commission: 0);
         let pool = system.staking.get_pool(:staker);
         let delegator = system.new_delegator(:amount);
