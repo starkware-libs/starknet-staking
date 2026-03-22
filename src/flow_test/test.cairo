@@ -755,16 +755,10 @@ fn delegators_add_to_delegation_pool_flow_test() {
     system.delegate(delegator: second_delegator, :pool, amount: delegator_amount / 2);
     system.advance_k_epochs_and_attest(:staker);
 
-    system
-        .add_to_delegation_pool(
-            delegator: first_delegator, pool: pool, amount: delegator_amount / 2,
-        );
+    system.add_to_delegation_pool(delegator: first_delegator, :pool, amount: delegator_amount / 2);
     system.advance_k_epochs_and_attest(:staker);
 
-    system
-        .add_to_delegation_pool(
-            delegator: second_delegator, pool: pool, amount: delegator_amount / 2,
-        );
+    system.add_to_delegation_pool(delegator: second_delegator, :pool, amount: delegator_amount / 2);
     system.advance_k_epochs_and_attest(:staker);
     system.advance_epoch();
 
@@ -1858,14 +1852,14 @@ fn set_same_public_key_for_2_different_stakers_flow_test() {
     let staking_consensus = system.staking.consensus_dispatcher();
 
     // Staker 1 stake and set public key.
-    system.stake(staker: staker_1, amount: amount, pool_enabled: false, commission: 200);
+    system.stake(staker: staker_1, :amount, pool_enabled: false, commission: 200);
     cheat_caller_address_once(
         contract_address: staking_address, caller_address: staker_1.staker.address,
     );
     staking.set_public_key(:public_key);
 
     // Staker 2 stake and set public key.
-    system.stake(staker: staker_2, amount: amount, pool_enabled: false, commission: 200);
+    system.stake(staker: staker_2, :amount, pool_enabled: false, commission: 200);
     cheat_caller_address_once(
         contract_address: staking_address, caller_address: staker_2.staker.address,
     );
@@ -2506,7 +2500,7 @@ fn get_stakers_switch_delegation_flow_test() {
 
     // Create delegator and delegate to staker 1.
     let delegator = system.new_delegator(amount: stake_amount);
-    system.delegate(delegator: delegator, pool: staker_1_pool, amount: stake_amount);
+    system.delegate(:delegator, pool: staker_1_pool, amount: stake_amount);
     system.advance_k_epochs();
 
     // Test get_stakers
@@ -2609,19 +2603,14 @@ fn get_stakers_staking_power_100_flow_test() {
     let btc_delegation_amount = TEST_MIN_BTC_FOR_REWARDS;
     let staking_consensus = system.staking.consensus_dispatcher();
     let staker = system.new_staker(amount: stake_amount);
-    system.stake(staker: staker, amount: stake_amount, pool_enabled: true, commission: 200);
+    system.stake(:staker, amount: stake_amount, pool_enabled: true, commission: 200);
     let btc_pool = system
-        .set_open_for_delegation(
-            staker: staker, token_address: system.btc_token.contract_address(),
-        );
+        .set_open_for_delegation(:staker, token_address: system.btc_token.contract_address());
     let delegator = system
         .new_btc_delegator(amount: btc_delegation_amount, token: system.btc_token);
     system
         .delegate_btc(
-            delegator: delegator,
-            pool: btc_pool,
-            amount: btc_delegation_amount,
-            token: system.btc_token,
+            :delegator, pool: btc_pool, amount: btc_delegation_amount, token: system.btc_token,
         );
     system.advance_k_epochs();
 
