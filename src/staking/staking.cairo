@@ -396,7 +396,7 @@ pub mod Staking {
                     Events::StakeOwnBalanceChanged {
                         staker_address,
                         old_self_stake: normalized_old_self_stake.to_strk_native_amount(),
-                        new_self_stake: new_self_stake,
+                        new_self_stake,
                     },
                 );
             new_self_stake
