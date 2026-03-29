@@ -117,6 +117,42 @@ pub(crate) fn is_btc_active(active_status: (Epoch, bool), epoch_id: Epoch) -> bo
     (epoch_id >= epoch) == is_active
 }
 
+/// Resolves a delayed field value at a given epoch.
+/// `delayed_field` is a tuple of (activation_epoch, old_value, new_value).
+/// Returns `Some(value)` if the resolved value is non-zero, `None` otherwise.
+///
+/// Precondition: `get_current_epoch() <= epoch_id < get_current_epoch() + K`.
+pub(crate) fn resolve_delayed_field<T, +Zero<T>, +Copy<T>, +Drop<T>>(
+    delayed_field: (Epoch, T, T), epoch_id: Epoch,
+) -> Option<T> {
+    let (activation_epoch, old_value, new_value) = delayed_field;
+    let current_value = if epoch_id >= activation_epoch {
+        new_value
+    } else {
+        old_value
+    };
+    if current_value.is_non_zero() {
+        Option::Some(current_value)
+    } else {
+        Option::None
+    }
+}
+
+/// Validates that a delayed field can be updated.
+/// Checks that the current epoch is past the activation epoch and the new value differs
+/// from the previous value.
+pub(crate) fn validate_delayed_field_update<T, +PartialEq<T>, +Copy<T>, +Drop<T>>(
+    delayed_field: (Epoch, T, T),
+    new_value: T,
+    curr_epoch: Epoch,
+    err_set_in_progress: Error,
+    err_must_differ: Error,
+) {
+    let (curr_activation_epoch, _, prev_value) = delayed_field;
+    assert!(curr_epoch >= curr_activation_epoch, "{}", err_set_in_progress);
+    assert!(prev_value != new_value, "{}", err_must_differ);
+}
+
 /// Returns the staking power for the given staker.
 /// The staking power is calculated by:
 /// ((staker_strk_total_amount / strk_total_amount) * (1 - ALPHA) +
