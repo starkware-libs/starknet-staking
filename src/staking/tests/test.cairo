@@ -1287,7 +1287,7 @@ fn test_remove_from_delegation_pool_intent() {
 
     // Validate that the data written in the exit intents map is updated.
     let undelegate_intent_key = UndelegateIntentKey {
-        pool_contract: pool_contract, identifier: cfg.test_info.pool_member_address.into(),
+        pool_contract, identifier: cfg.test_info.pool_member_address.into(),
     };
     let actual_undelegate_intent_value = load_from_simple_map(
         map_selector: selector!("pool_exit_intents"),
@@ -1367,7 +1367,7 @@ fn test_remove_from_delegation_pool_intent_assertions() {
 
     // Should catch INVALID_UNDELEGATE_INTENT_VALUE.
     let undelegate_intent_key = UndelegateIntentKey {
-        pool_contract: pool_contract, identifier: cfg.test_info.pool_member_address.into(),
+        pool_contract, identifier: cfg.test_info.pool_member_address.into(),
     };
     let invalid_undelegate_intent_value = UndelegateIntentValue {
         unpool_time: Timestamp { seconds: 1 },
@@ -1436,7 +1436,7 @@ fn test_remove_from_delegation_pool_action() {
     staking_pool_dispatcher
         .remove_from_delegation_pool_action(identifier: cfg.test_info.pool_member_address.into());
     let undelegate_intent_key = UndelegateIntentKey {
-        pool_contract: pool_contract, identifier: cfg.test_info.pool_member_address.into(),
+        pool_contract, identifier: cfg.test_info.pool_member_address.into(),
     };
     let actual_undelegate_intent_value_after_action: UndelegateIntentValue = load_from_simple_map(
         map_selector: selector!("pool_exit_intents"),
@@ -2887,7 +2887,7 @@ fn test_staker_pool_info_v3() {
     let token = cfg.test_info.strk_token;
 
     // Enter the pool.
-    enter_delegation_pool_for_testing_using_dispatcher(pool_contract: pool_contract, :cfg, :token);
+    enter_delegation_pool_for_testing_using_dispatcher(:pool_contract, :cfg, :token);
     let delegated_amount = cfg.pool_member_info._deprecated_amount;
 
     // Test same epoch as delegation.
