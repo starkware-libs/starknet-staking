@@ -5,7 +5,7 @@ on:
 
 jobs:
   check_formatting:
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-starkware-libs-starknet-staking-small-ubuntu-24-04-amd64
 
     steps:
       - uses: actions/checkout@v4
