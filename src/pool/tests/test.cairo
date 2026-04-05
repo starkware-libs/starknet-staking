@@ -226,7 +226,7 @@ fn test_add_to_delegation_pool() {
     assert_number_of_events(actual: events.len(), expected: 1, message: "add_to_delegation_pool");
     assert_delegation_pool_member_balance_changed_event(
         spied_event: events[0],
-        pool_member: pool_member,
+        :pool_member,
         old_delegated_stake: pool_member_info_before_add.amount,
         new_delegated_stake: pool_member_info_after_add.amount,
     );
@@ -870,7 +870,7 @@ fn test_exit_delegation_pool_intent() {
     );
     // Validate that the data is written in the exit intents map in staking contract.
     let undelegate_intent_key = UndelegateIntentKey {
-        pool_contract: pool_contract, identifier: cfg.test_info.pool_member_address.into(),
+        pool_contract, identifier: cfg.test_info.pool_member_address.into(),
     };
     let actual_undelegate_intent_value = load_from_simple_map(
         map_selector: selector!("pool_exit_intents"),
@@ -1403,7 +1403,7 @@ fn test_partial_undelegate() {
     assert!(actual_pool_member_info == expected_pool_member_info);
     // Validate that the data is written in the exit intents map in staking contract.
     let undelegate_intent_key = UndelegateIntentKey {
-        pool_contract: pool_contract, identifier: cfg.test_info.pool_member_address.into(),
+        pool_contract, identifier: cfg.test_info.pool_member_address.into(),
     };
     let actual_undelegate_intent_value = load_from_simple_map(
         map_selector: selector!("pool_exit_intents"),
