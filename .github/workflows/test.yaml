@@ -5,7 +5,7 @@ on:
 
 jobs:
   verify_flows:
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-starkware-libs-starknet-staking-large-ubuntu-24-04-amd64
 
     steps:
       - uses: actions/checkout@v4
@@ -20,7 +20,7 @@ jobs:
           python scripts/check_all_flows_have_test.py --allow-duplicate-tests
 
   test:
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-starkware-libs-starknet-staking-large-ubuntu-24-04-amd64
 
     steps:
       - uses: actions/checkout@v4
