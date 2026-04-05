@@ -6,6 +6,8 @@ on:
       - main
 
 jobs:
+  runs-on: namespace-profile-starkware-libs-starknet-staking-large-ubuntu-24-04-amd64
+
   test:
     uses: ./.github/workflows/test.yaml
     secrets: inherit
