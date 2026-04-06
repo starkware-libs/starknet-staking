@@ -10,6 +10,7 @@ pub type Epoch = u64;
 pub type Version = felt252;
 pub type VecIndex = u64;
 pub type PublicKey = felt252;
+pub type PeerId = u256;
 pub type BlockNumber = u64;
 pub type StakingPower = u128;
 

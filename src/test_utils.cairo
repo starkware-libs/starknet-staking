@@ -83,6 +83,7 @@ pub(crate) mod constants {
     use staking::types::{Amount, BlockNumber, Commission, Index, Inflation, PublicKey};
     use starknet::class_hash::ClassHash;
     use starknet::{ContractAddress, get_block_number};
+    use starkware_utils::constants::MAX_U128;
     use starkware_utils::time::time::{Seconds, Timestamp};
 
     /// STRK rewards constants.
@@ -213,6 +214,10 @@ pub(crate) mod constants {
         .unwrap();
     pub(crate) const BTC_TOKEN_ADDRESS: ContractAddress = 'BTC_TOKEN_ADDRESS'.try_into().unwrap();
     pub(crate) const PUBLIC_KEY: PublicKey = 'PUBLIC_KEY';
+    // Peer ID constants use values > u128::MAX to ensure full u256 storage is exercised.
+    pub(crate) const PEER_ID: u256 = MAX_U128.into() + 1;
+    pub(crate) const OTHER_PEER_ID: u256 = 2 * PEER_ID + 1;
+    pub(crate) const THIRD_PEER_ID: u256 = 2 * OTHER_PEER_ID + 1;
 
     pub fn DEFAULT_EPOCH_INFO() -> EpochInfo {
         EpochInfoTrait::new(
