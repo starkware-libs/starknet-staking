@@ -356,7 +356,19 @@ pub mod Pool {
             rewards += pool_member_info._unclaimed_rewards_from_v0;
             pool_member_info._unclaimed_rewards_from_v0 = Zero::zero();
             pool_member_info.entry_to_claim_from = updated_entry_to_claim_from;
-            pool_member_info.reward_checkpoint = until_checkpoint;
+            // Security: only advance the reward checkpoint when the member trace was fully
+            // consumed. With paginated claims, advancing the checkpoint on a partial claim
+            // would discard the unprocessed interval and permanently underpay the member
+            // (High: loss of unclaimed yield). Partial rewards are still transferred now, and
+            // the remaining rewards are claimed in follow-up transactions.
+            let member_trace_len = self
+                .pool_member_balance_trace
+                .entry(pool_member)
+                .deref()
+                .length();
+            if updated_entry_to_claim_from >= member_trace_len {
+                pool_member_info.reward_checkpoint = until_checkpoint;
+            }
 
             // Write the updated pool member info to storage.
             self.write_pool_member_info(:pool_member, :pool_member_info);
@@ -854,9 +866,19 @@ pub mod Pool {
 
             let base_value = self.staking_rewards_base_value.read();
 
-            // **Note**: The loop iterates over the balance changes in the pool member's balance
-            // trace. This loop is unbounded but unlikely to exceed gas limits.
-            while entry_to_claim_from < pool_member_trace_length {
+            // Security: bound the reward-calculation loop to prevent unbounded gas
+            // consumption and griefing (Medium: temporary freeze / griefing of unclaimed
+            // yield). A member trace with many entries could otherwise make `claim_rewards`
+            // exceed the block gas limit and block reward withdrawal. Callers can claim in
+            // multiple transactions; processed progress is persisted through
+            // `entry_to_claim_from`.
+            let mut processed_entries: u32 = 0;
+            // Maximum balance-trace entries processed in a single claim transaction.
+            // This value keeps a single claim well within typical Starknet execution limits
+            // while still allowing large histories to be claimed incrementally.
+            let max_entries_per_claim: u32 = 50;
+            while entry_to_claim_from < pool_member_trace_length
+                && processed_entries < max_entries_per_claim {
                 let pool_member_checkpoint = pool_member_trace.at(entry_to_claim_from);
                 // If the balance change is after `until_epoch` (and therefore does not affect
                 // the current reward computation), exit the loop.
@@ -874,15 +896,43 @@ pub mod Pool {
                 from_sigma = to_sigma;
                 from_balance = pool_member_checkpoint.balance();
                 entry_to_claim_from += 1;
+                processed_entries += 1;
             }
 
-            // Compute the remaining rewards from (inclusive) the last visited balance change in
-            // `pool_member_trace` (or from `from_checkpoint`) to (exclusive) `until_checkpoint`.
-            let to_sigma = self.find_sigma(until_checkpoint, curr_epoch: until_epoch);
-            rewards +=
-                compute_rewards_rounded_down(
-                    amount: from_balance, interest: to_sigma - from_sigma, :base_value,
-                );
+            // Security: only settle the final interval once the full member trace relevant to
+            // this claim has been processed. If the per-transaction bound was reached, return
+            // partial rewards and preserve the remaining state in `entry_to_claim_from` so the
+            // caller can continue claiming incrementally. Settling the final interval early
+            // would otherwise overpay or underpay rewards (Medium: temporary freeze/griefing).
+            let trace_fully_processed = entry_to_claim_from >= pool_member_trace_length;
+            if !trace_fully_processed {
+                let next_checkpoint = pool_member_trace.at(entry_to_claim_from);
+                if next_checkpoint.epoch() >= until_epoch {
+                    // No more relevant entries exist before `until_epoch`; the final interval
+                    // can be settled safely even though the trace contains future entries.
+                    let to_sigma = self.find_sigma(until_checkpoint, curr_epoch: until_epoch);
+                    rewards +=
+                        compute_rewards_rounded_down(
+                            amount: from_balance, interest: to_sigma - from_sigma, :base_value,
+                        );
+                    // Mark the trace as fully consumed for this claim so the caller checkpoint
+                    // can advance without losing the final interval.
+                    entry_to_claim_from = pool_member_trace_length;
+                } else {
+                    // More claimable entries remain; return partial rewards now. The caller must
+                    // invoke `claim_rewards` again to process the remainder.
+                    return (rewards, entry_to_claim_from);
+                }
+            } else {
+                // Compute the remaining rewards from (inclusive) the last visited balance change
+                // in `pool_member_trace` (or from `from_checkpoint`) to (exclusive)
+                // `until_checkpoint`.
+                let to_sigma = self.find_sigma(until_checkpoint, curr_epoch: until_epoch);
+                rewards +=
+                    compute_rewards_rounded_down(
+                        amount: from_balance, interest: to_sigma - from_sigma, :base_value,
+                    );
+            }
 
             (rewards, entry_to_claim_from)
         }
