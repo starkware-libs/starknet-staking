@@ -93,17 +93,30 @@ pub(crate) fn compute_commission_amount_rounded_down(
 ///
 /// Precondition: `get_current_epoch() <= epoch_id < get_current_epoch() + K`.
 pub(crate) fn balance_at_epoch(trace: StoragePath<Trace>, epoch_id: Epoch) -> NormalizedAmount {
-    let (epoch, balance) = trace.last().unwrap_or_else(|err| panic!("{err}"));
+    let (epoch, balance) = match trace.last() {
+        Result::Ok(val) => val,
+        Result::Err(_) => {
+            return NormalizedAmountTrait::from_amount_18_decimals(amount: Zero::zero());
+        },
+    };
     let current_balance = if epoch <= epoch_id {
         balance
     } else {
-        let (epoch, balance) = trace.second_last().unwrap_or_else(|err| panic!("{err}"));
-        if epoch <= epoch_id {
-            balance
-        } else {
-            let (epoch, balance) = trace.third_last().unwrap_or_else(|err| panic!("{err}"));
-            assert!(epoch <= epoch_id, "{}", InternalError::INVALID_THIRD_LAST);
-            balance
+        match trace.second_last() {
+            Result::Ok((epoch, balance)) => {
+                if epoch <= epoch_id {
+                    balance
+                } else {
+                    match trace.third_last() {
+                        Result::Ok((epoch, balance)) => {
+                            assert!(epoch <= epoch_id, "{}", InternalError::INVALID_THIRD_LAST);
+                            balance
+                        },
+                        Result::Err(_) => Zero::zero(),
+                    }
+                }
+            },
+            Result::Err(_) => Zero::zero(),
         }
     };
     NormalizedAmountTrait::from_amount_18_decimals(amount: current_balance)
